@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="form-container fade">
+    <h2>Order Status</h2>
+    <div id="statusDiv"></div>
+    <button class="btn" onclick="goBack()">Back to Dashboard</button>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+    let user = localStorage.getItem("user");
+    if(!user){
+        window.location.href = "{{ url_for('login_page') }}";
+    }
+});
+function checkOrderStatus() {
+    let orderId = localStorage.getItem("latestOrderId");
+    if(!orderId) {
+        document.getElementById("statusDiv").innerText = "No recent order found.";
+        return;
+    }
+    fetch('/order_status/' + orderId)
+    .then(response => response.json())
+    .then(data => {
+        if(data.error) {
+            document.getElementById("statusDiv").innerText = data.error;
+        } else {
+            let order = data.order;
+            document.getElementById("statusDiv").innerHTML = 
+                "<p>Order ID: " + order.order_id + "</p>" +
+                "<p>Cafe: " + order.cafe + "</p>" +
+                "<p>Status: " + order.status + "</p>" +
+                "<p>Ordered at: " + order.timestamp + "</p>";
+            if(order.status === "Delivering") {
+                setTimeout(checkOrderStatus, 5000); // Poll every 5 seconds
+            } else if(order.status === "Order Delivered") {
+                alert("Your order has been delivered!");
+            }
+        }
+    });
+}
+function goBack() {
+    window.location.href = "{{ url_for('dashboard') }}";
+}
+document.addEventListener("DOMContentLoaded", checkOrderStatus);
+</script>
+{% endblock %}

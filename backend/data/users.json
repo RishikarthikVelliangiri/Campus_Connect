@@ -1,0 +1,21 @@
+{
+    "users": [
+        {
+            "username": "newuser",
+            "password": "newpass",
+            "dorm": "West",
+            "room": "101"
+        },
+        {
+            "username": "user",
+            "password": "userpass",
+            "dorm": "West",
+            "room": "205"
+        },
+        {
+            "username": "Rishi",
+            "password": "Rishi123",
+            "dorm": "West A"
+        }
+    ]
+}

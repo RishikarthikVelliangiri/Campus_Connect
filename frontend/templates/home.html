@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="home-container fade">
+    <h2>Welcome to CampusCafe Connect</h2>
+    <p>Your one-stop portal for campus food ordering.</p>
+    <div class="home-buttons">
+        <a class="btn fade" href="{{ url_for('login_page') }}">Login</a>
+        <a class="btn fade" href="{{ url_for('register_page') }}">Register</a>
+        <a class="btn fade" href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a class="btn fade" href="{{ url_for('order_page') }}">Order Food</a>
+        <a class="btn fade" href="{{ url_for('order_status_page') }}">Order Status</a>
+    </div>
+</div>
+{% endblock %}

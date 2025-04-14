@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="form-container fade">
+    <h2>Login</h2>
+    <form id="loginForm">
+        <label>Username:</label>
+        <input type="text" id="username" name="username" required>
+        <label>Password:</label>
+        <input type="password" id="password" name="password" required>
+        <button type="button" onclick="login()">Login</button>
+    </form>
+    <p>Don't have an account? <a href="{{ url_for('register_page') }}">Register here</a></p>
+    <div id="message" class="msg"></div>
+</div>
+<script>
+function login() {
+    var username = document.getElementById("username").value;
+    var password = document.getElementById("password").value;
+    fetch('/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username: username, password: password})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.error) {
+            document.getElementById("message").innerText = data.error;
+        } else {
+            localStorage.setItem("user", JSON.stringify(data.user));
+            window.location.href = "{{ url_for('dashboard') }}";
+        }
+    });
+}
+</script>
+{% endblock %}

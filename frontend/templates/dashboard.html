@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="dashboard-container fade">
+    <h2>Dashboard</h2>
+    <div id="welcomeUser"></div>
+    <button class="btn" onclick="logout()">Logout</button>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+    var user = JSON.parse(localStorage.getItem("user"));
+    if(!user){
+        window.location.href = "{{ url_for('login_page') }}";
+    } else {
+        document.getElementById("welcomeUser").innerText = 
+            "Welcome, " + user.username + " | Dorm: " + user.dorm;
+    }
+});
+function logout(){
+    localStorage.removeItem("user");
+    localStorage.removeItem("latestOrderId");
+    window.location.href = "{{ url_for('home') }}";
+}
+</script>
+{% endblock %}

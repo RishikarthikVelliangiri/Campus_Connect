@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CampusCafe Connect</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+    <header>
+        <h1>CampusCafe Connect</h1>
+        <nav>
+            <a href="{{ url_for('home') }}" class="nav-link fade">Home</a>
+            <a href="{{ url_for('login_page') }}" class="nav-link fade">Login</a>
+            <a href="{{ url_for('register_page') }}" class="nav-link fade">Register</a>
+            <a href="{{ url_for('dashboard') }}" class="nav-link fade">Dashboard</a>
+            <a href="{{ url_for('order_page') }}" class="nav-link fade" id="orderLink">Order Food</a>
+            <a href="{{ url_for('order_status_page') }}" class="nav-link fade" id="statusLink">Order Status</a>
+            <a href="#" class="nav-link fade" id="logoutLink" onclick="logout()">Logout</a>
+        </nav>
+    </header>
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
+    <footer>
+        <p>&copy; 2025 CampusCafe Connect</p>
+    </footer>
+    <script>
+    // Check if user is logged in (stored in localStorage) and update nav links accordingly.
+    document.addEventListener("DOMContentLoaded", function(){
+        let user = localStorage.getItem("user");
+        if(user){
+            document.getElementById("logoutLink").style.display = "inline";
+            document.getElementById("orderLink").style.display = "inline";
+            document.getElementById("statusLink").style.display = "inline";
+        } else {
+            document.getElementById("logoutLink").style.display = "none";
+            document.getElementById("orderLink").style.display = "none";
+            document.getElementById("statusLink").style.display = "none";
+        }
+    });
+    function logout(){
+        localStorage.removeItem("user");
+        localStorage.removeItem("latestOrderId");
+        window.location.href = "{{ url_for('home') }}";
+    }
+    </script>
+</body>
+</html>

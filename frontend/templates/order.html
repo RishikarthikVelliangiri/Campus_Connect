@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="form-container fade">
+    <h2>Order Food</h2>
+    <form id="orderForm">
+        <label>Select Cafe:</label>
+        <select id="cafeSelect" required>
+            <option value="">Select Cafe</option>
+            <option value="Hashtag">Hashtag</option>
+            <option value="Korebi">Korebi</option>
+            <option value="Charlie's Cafe">Charlie's Cafe</option>
+            <option value="Blue Tokai">Blue Tokai</option>
+        </select>
+        <div id="menuDiv"></div>
+        <button type="button" onclick="placeOrder()">Place Order</button>
+    </form>
+    <div id="orderMessage" class="msg"></div>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+    let user = localStorage.getItem("user");
+    if(!user){
+        window.location.href = "{{ url_for('login_page') }}";
+    }
+});
+function loadCafeMenu(cafe) {
+    fetch('/menu')
+    .then(response => response.json())
+    .then(data => {
+        let menuDiv = document.getElementById("menuDiv");
+        menuDiv.innerHTML = "<h3>Menu for " + cafe + "</h3>";
+        data[cafe].forEach(function(item, idx) {
+            menuDiv.innerHTML += item.item + " - Rs. " + item.price + 
+            " <input type='number' id='qty" + idx + "' placeholder='0' min='0' value='0'><br>";
+        });
+    });
+}
+document.getElementById("cafeSelect").addEventListener("change", function(){
+    let cafe = this.value;
+    if(cafe){
+        loadCafeMenu(cafe);
+    } else {
+        document.getElementById("menuDiv").innerHTML = "";
+    }
+});
+function placeOrder() {
+    let cafe = document.getElementById("cafeSelect").value;
+    if(!cafe) {
+        document.getElementById("orderMessage").innerText = "Please select a cafe.";
+        return;
+    }
+    fetch('/menu')
+    .then(response => response.json())
+    .then(data => {
+        let orderItems = [];
+        data[cafe].forEach(function(item, idx) {
+            let qty = parseInt(document.getElementById("qty" + idx).value);
+            if(qty > 0) {
+                orderItems.push({item: item.item, price: item.price, quantity: qty});
+            }
+        });
+        if(orderItems.length === 0) {
+            document.getElementById("orderMessage").innerText = "Please select at least one item.";
+            return;
+        }
+        var user = JSON.parse(localStorage.getItem("user"));
+        fetch('/order', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: user.username, cafe: cafe, items: orderItems})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.error) {
+                document.getElementById("orderMessage").innerText = data.error;
+            } else {
+                // Save order_id so Order Status page can poll for status
+                localStorage.setItem("latestOrderId", data.order.order_id);
+                window.location.href = "{{ url_for('order_status_page') }}";
+            }
+        });
+    });
+}
+</script>
+{% endblock %}

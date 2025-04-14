@@ -1,0 +1,131 @@
+/* Modern, clean style using a light brown and cream palette with fade transitions */
+
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #faf3e0; /* Cream */
+}
+
+header {
+    background-color: #a67b5b; /* Light brown */
+    color: #fff;
+    padding: 15px;
+    text-align: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 2em;
+}
+
+nav {
+    margin-top: 10px;
+}
+
+.nav-link {
+    color: #fff;
+    text-decoration: none;
+    margin: 0 15px;
+    font-size: 1.1em;
+    padding-bottom: 5px;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    border-bottom: 2px solid #fff;
+}
+
+.content {
+    margin: 30px auto;
+    padding: 20px;
+    max-width: 800px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.home-container {
+    text-align: center;
+}
+
+.home-buttons {
+    margin-top: 20px;
+}
+
+.home-buttons .btn {
+    display: inline-block;
+    margin: 10px;
+    padding: 15px 25px;
+    background-color: #a67b5b;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 1.2em;
+    transition: opacity 0.3s ease;
+}
+
+.home-buttons .btn:hover {
+    opacity: 0.8;
+}
+
+.form-container {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+form label {
+    display: block;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+form input, form select {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+form button {
+    margin-top: 15px;
+    padding: 10px 20px;
+    background-color: #a67b5b;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: opacity 0.3s ease;
+}
+
+form button:hover {
+    opacity: 0.8;
+}
+
+.msg {
+    margin-top: 10px;
+    color: #d32f2f;
+}
+
+footer {
+    background-color: #a67b5b;
+    color: #fff;
+    text-align: center;
+    padding: 15px;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
+
+/* Fade transition for elements */
+.fade {
+    opacity: 0;
+    animation: fadeIn 0.5s forwards;
+}
+
+@keyframes fadeIn {
+    to { opacity: 1; }
+}
