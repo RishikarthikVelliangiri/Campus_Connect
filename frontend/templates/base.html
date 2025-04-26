@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>CampusCafe Connect</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,39 +11,97 @@
         <h1>CampusCafe Connect</h1>
         <nav>
             <a href="{{ url_for('home') }}" class="nav-link fade">Home</a>
-            <a href="{{ url_for('login_page') }}" class="nav-link fade">Login</a>
-            <a href="{{ url_for('register_page') }}" class="nav-link fade">Register</a>
-            <a href="{{ url_for('dashboard') }}" class="nav-link fade">Dashboard</a>
-            <a href="{{ url_for('order_page') }}" class="nav-link fade" id="orderLink">Order Food</a>
-            <a href="{{ url_for('order_status_page') }}" class="nav-link fade" id="statusLink">Order Status</a>
-            <a href="#" class="nav-link fade" id="logoutLink" onclick="logout()">Logout</a>
+            <!-- Links controlled by JS below -->
+            <a href="{{ url_for('login_page') }}" class="nav-link fade" id="loginLink">Login</a>
+            <a href="{{ url_for('register_page') }}" class="nav-link fade" id="registerLink">Register</a>
+            <a href="{{ url_for('dashboard') }}" class="nav-link fade" id="dashboardLink" style="display: none;">Dashboard</a>
+            <a href="{{ url_for('order_page') }}" class="nav-link fade" id="orderLink" style="display: none;">Order Food</a>
+            <a href="{{ url_for('order_status_page') }}" class="nav-link fade" id="statusLink" style="display: none;">Recent Order Status</a>
+            <!-- NEW: Cafe Admin Link -->
+            <a href="{{ url_for('cafe_admin_dashboard') }}" class="nav-link fade" id="cafeAdminLink" style="display: none;">Cafe Admin</a>
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-link fade" id="superAdminLink" style="display: none;">Super Admin</a>
+            <a href="#" class="nav-link fade" id="logoutLink" style="display: none;" onclick="logout()">Logout</a>
+            <span id="loggedInUser" style="color: white; margin-left: 15px; display: none;"></span>
         </nav>
     </header>
-    <div class="content">
+    <main class="content">
         {% block content %}{% endblock %}
-    </div>
+    </main>
     <footer>
-        <p>&copy; 2025 CampusCafe Connect</p>
+        <p>© 2025 CampusCafe Connect - Flame University</p>
     </footer>
+
     <script>
-    // Check if user is logged in (stored in localStorage) and update nav links accordingly.
     document.addEventListener("DOMContentLoaded", function(){
-        let user = localStorage.getItem("user");
-        if(user){
-            document.getElementById("logoutLink").style.display = "inline";
-            document.getElementById("orderLink").style.display = "inline";
-            document.getElementById("statusLink").style.display = "inline";
-        } else {
-            document.getElementById("logoutLink").style.display = "none";
-            document.getElementById("orderLink").style.display = "none";
-            document.getElementById("statusLink").style.display = "none";
+        let userString = localStorage.getItem("user");
+        const loginLink = document.getElementById("loginLink");
+        const registerLink = document.getElementById("registerLink");
+        const dashboardLink = document.getElementById("dashboardLink"); // User dashboard
+        const orderLink = document.getElementById("orderLink");
+        const statusLink = document.getElementById("statusLink");
+        const logoutLink = document.getElementById("logoutLink");
+        const cafeAdminLink = document.getElementById("cafeAdminLink"); // Cafe admin dashboard link
+        const superAdminLink = document.getElementById("superAdminLink"); // Super admin dashboard link
+        const loggedInUserSpan = document.getElementById("loggedInUser");
+
+        // Hide all conditional links initially
+        if (dashboardLink) dashboardLink.style.display = "none";
+        if (orderLink) orderLink.style.display = "none";
+        if (statusLink) statusLink.style.display = "none";
+        if (cafeAdminLink) cafeAdminLink.style.display = "none";
+        if (superAdminLink) superAdminLink.style.display = "none";
+        if (logoutLink) logoutLink.style.display = "none";
+        if (loggedInUserSpan) loggedInUserSpan.style.display = "none";
+        if (loginLink) loginLink.style.display = "inline-block"; // Show by default
+        if (registerLink) registerLink.style.display = "inline-block"; // Show by default
+
+        if (userString) {
+            try {
+                let user = JSON.parse(userString);
+                // User is logged in, show logout and username
+                if (loginLink) loginLink.style.display = "none";
+                if (registerLink) registerLink.style.display = "none";
+                if (logoutLink) logoutLink.style.display = "inline-block";
+                if (loggedInUserSpan) {
+                    loggedInUserSpan.textContent = `(${user.username})`;
+                    loggedInUserSpan.style.display = "inline";
+                }
+
+                // --- Check User Type and Show Appropriate Links ---
+                if (user.managed_cafe) { // Is Cafe Admin?
+                    if (cafeAdminLink) cafeAdminLink.style.display = "inline-block";
+                } else if (user.role === 'super_admin') { // Is Super Admin?
+                    if (superAdminLink) superAdminLink.style.display = "inline-block";
+                } else { // Regular User
+                    if (dashboardLink) dashboardLink.style.display = "inline-block";
+                    if (orderLink) orderLink.style.display = "inline-block";
+                    if (statusLink) statusLink.style.display = "inline-block";
+                }
+                // --- End User Type Check ---
+
+            } catch(e) {
+                 console.error("Error parsing user data:", e);
+                 localStorage.removeItem("user"); // Clear invalid data
+                 // Force logged out state (show login/register)
+                 if (loginLink) loginLink.style.display = "inline-block";
+                 if (registerLink) registerLink.style.display = "inline-block";
+            }
         }
+
+        // Fade-in animation trigger
+        const fadeElements = document.querySelectorAll('.fade');
+        fadeElements.forEach((el, index) => {
+            el.style.animationDelay = `${index * 0.1}s`;
+            el.classList.add('active');
+        });
     });
+
     function logout(){
         localStorage.removeItem("user");
         localStorage.removeItem("latestOrderId");
-        window.location.href = "{{ url_for('home') }}";
+        window.location.href = "{{ url_for('login_page') }}"; // Redirect to login page
     }
     </script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

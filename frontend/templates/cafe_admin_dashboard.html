@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-container fade"> {# Use admin-container style #}
+    <h2 id="cafeAdminTitle">Cafe Admin Dashboard</h2>
+    <p id="cafeAdminInfo" style="text-align: center; color: #666;">Manage incoming orders for your cafe.</p>
+
+    <div id="messageDiv" class="msg" style="display: none;"></div> {# For success/error messages #}
+
+    <div class="admin-section">
+        <h3>Pending Orders</h3>
+        <div id="pendingOrdersList" class="order-history-list">Loading orders...</div>
+    </div>
+
+     <div class="admin-section">
+        <h3>Delivered Orders</h3>
+        <div id="deliveredOrdersList" class="order-history-list">Loading orders...</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let managedCafe = null; // Store the name of the cafe managed by this admin
+
+// formatTimestamp function (same as before)
+function formatTimestamp(isoTimestamp) {
+    if (!isoTimestamp) return 'N/A';
+    try { const date = new Date(isoTimestamp); const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }; return date.toLocaleString(undefined, options); } catch (e) { return isoTimestamp; }
+}
+
+// Function to display orders in the correct lists
+function displayCafeOrders(orders) {
+    const pendingListDiv = document.getElementById('pendingOrdersList');
+    const deliveredListDiv = document.getElementById('deliveredOrdersList');
+    pendingListDiv.innerHTML = ''; // Clear previous
+    deliveredListDiv.innerHTML = '';
+
+    let pendingCount = 0;
+    let deliveredCount = 0;
+
+    if (!orders || orders.length === 0) {
+        pendingListDiv.innerHTML = '<p>No pending orders found.</p>';
+        deliveredListDiv.innerHTML = '<p>No delivered orders found.</p>';
+        return;
+    }
+
+    orders.forEach(order => {
+        const orderCard = document.createElement('div');
+        orderCard.className = 'order-history-card'; // Reuse style
+
+        let itemsSummary = order.items.map(item => `${item.quantity}x ${item.item}`).join(', ');
+        if (itemsSummary.length > 60) itemsSummary = itemsSummary.substring(0, 57) + '...';
+
+        // --- Add "Mark Delivered" button only for Pending orders ---
+        let actionButtonHtml = '';
+        if (order.status === 'Pending') {
+            actionButtonHtml = `<button class="btn btn-small" onclick="markOrderDelivered(${order.order_id})">Mark Delivered</button>`;
+        }
+
+        orderCard.innerHTML = `
+            <div class="order-card-header">
+                <strong>Order #${order.order_id}</strong> by ${order.username}
+                <span class="status-${order.status.toLowerCase().replace(/ /g, '-')}">${order.status}</span>
+            </div>
+            <div class="order-card-body">
+                <p>Placed: ${formatTimestamp(order.timestamp)}</p>
+                <p>Items: ${itemsSummary}</p>
+                <p>Total: Rs. ${order.total_price ? order.total_price.toFixed(2) : 'N/A'}</p>
+            </div>
+             <div class="order-card-footer">
+                 ${actionButtonHtml}
+             </div>
+        `;
+
+        // Append to the correct list based on status
+        if (order.status === 'Pending') {
+            pendingListDiv.appendChild(orderCard);
+            pendingCount++;
+        } else { // Assuming others (like "Order Delivered") go here
+            deliveredListDiv.appendChild(orderCard);
+            deliveredCount++;
+        }
+    });
+
+    // Add messages if lists are empty after processing
+    if (pendingCount === 0) {
+        pendingListDiv.innerHTML = '<p>No pending orders found.</p>';
+    }
+     if (deliveredCount === 0) {
+        deliveredListDiv.innerHTML = '<p>No delivered orders found.</p>';
+    }
+}
+
+// Function to fetch orders for the managed cafe
+function fetchCafeOrders() {
+    if (!managedCafe) {
+        console.error("Managed cafe not set.");
+        document.getElementById('pendingOrdersList').innerText = 'Error: Could not determine which cafe to manage.';
+        document.getElementById('deliveredOrdersList').innerText = '';
+        return;
+    }
+
+    // Indicate loading
+    document.getElementById('pendingOrdersList').innerHTML = '<i>Loading pending orders...</i>';
+    document.getElementById('deliveredOrdersList').innerHTML = '<i>Loading delivered orders...</i>';
+
+
+    fetch(`/api/cafe_admin/orders?cafe=${encodeURIComponent(managedCafe)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error("Error fetching cafe orders:", data.error);
+                document.getElementById('pendingOrdersList').innerText = `Error: ${data.error}`;
+                document.getElementById('deliveredOrdersList').innerText = '';
+            } else {
+                displayCafeOrders(data.orders);
+            }
+        })
+        .catch(error => {
+            console.error("Could not fetch cafe orders:", error);
+            document.getElementById('pendingOrdersList').innerText = 'Failed to load orders.';
+            document.getElementById('deliveredOrdersList').innerText = '';
+        });
+}
+
+// Function to mark an order as delivered
+function markOrderDelivered(orderId) {
+    const messageDiv = document.getElementById('messageDiv');
+    messageDiv.style.display = 'none'; // Hide previous messages
+
+    if (!confirm(`Are you sure you want to mark Order #${orderId} as delivered?`)) {
+        return; // User cancelled
+    }
+
+    console.log(`Attempting to mark order ${orderId} delivered...`); // Debug log
+
+    fetch(`/api/cafe_admin/mark_delivered/${orderId}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+        // No body needed for this simple request
+    })
+    .then(response => response.json().then(data => ({ status: response.status, body: data })))
+    .then(({ status, body }) => {
+        if (status === 200) {
+            console.log(`Order ${orderId} marked delivered successfully.`); // Debug log
+            messageDiv.innerText = body.message || `Order ${orderId} updated.`;
+            messageDiv.className = 'msg success';
+            messageDiv.style.display = 'block';
+            fetchCafeOrders(); // Refresh the list
+        } else {
+             console.error(`Error marking order ${orderId} delivered:`, status, body.error); // Debug log
+             messageDiv.innerText = body.error || `Failed to update order ${orderId}.`;
+             messageDiv.className = 'msg error';
+             messageDiv.style.display = 'block';
+        }
+         // Hide message after a few seconds
+        setTimeout(() => { messageDiv.style.display = 'none'; }, 4000);
+    })
+    .catch(error => {
+        console.error("Error marking order delivered:", error);
+        messageDiv.innerText = `An error occurred while updating order ${orderId}.`;
+        messageDiv.className = 'msg error';
+        messageDiv.style.display = 'block';
+        setTimeout(() => { messageDiv.style.display = 'none'; }, 4000);
+    });
+}
+
+
+// Initial setup on page load
+document.addEventListener("DOMContentLoaded", function() {
+    const userString = localStorage.getItem("user");
+    let user = null;
+
+    if (userString) {
+        try { user = JSON.parse(userString); } catch (e) { user = null; }
+    }
+
+    // Check if user is logged in AND is a cafe admin
+    if (!user || !user.managed_cafe) {
+        console.log("User not a cafe admin or not logged in. Redirecting...");
+        // Redirect non-admins or logged-out users to login page
+        window.location.href = "{{ url_for('login_page') }}";
+        return; // Stop further execution
+    }
+
+    // Set the managed cafe name and update titles
+    managedCafe = user.managed_cafe;
+    document.getElementById('cafeAdminTitle').textContent = `${managedCafe} - Admin Dashboard`;
+    document.getElementById('cafeAdminInfo').textContent = `Manage incoming orders for ${managedCafe}.`;
+
+    // Fetch initial orders
+    fetchCafeOrders();
+});
+
+</script>
+{% endblock %}

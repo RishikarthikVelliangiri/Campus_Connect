@@ -1,34 +1,61 @@
+<!-- frontend/templates/login.html -->
 {% extends "base.html" %}
 {% block content %}
 <div class="form-container fade">
     <h2>Login</h2>
-    <form id="loginForm">
-        <label>Username:</label>
+    <form id="loginForm" onsubmit="loginUser(event)">
+        <label for="username">Username:</label>
         <input type="text" id="username" name="username" required>
-        <label>Password:</label>
+        <label for="password">Password:</label>
         <input type="password" id="password" name="password" required>
-        <button type="button" onclick="login()">Login</button>
+        <button type="submit">Login</button>
     </form>
     <p>Don't have an account? <a href="{{ url_for('register_page') }}">Register here</a></p>
     <div id="message" class="msg"></div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-function login() {
+function loginUser(event) {
+    event.preventDefault();
     var username = document.getElementById("username").value;
     var password = document.getElementById("password").value;
-    fetch('/login', {
+    var messageDiv = document.getElementById("message");
+    messageDiv.innerText = "";
+
+    fetch('/api/login', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({username: username, password: password})
     })
-    .then(response => response.json())
-    .then(data => {
-        if(data.error) {
-            document.getElementById("message").innerText = data.error;
+    .then(response => response.json().then(data => ({ status: response.status, body: data })))
+    .then(({ status, body }) => {
+        if (status === 200 && body.user) {
+            // --- Store user info, including managed_cafe if present ---
+            localStorage.setItem("user", JSON.stringify(body.user));
+            messageDiv.innerText = "Login successful! Redirecting...";
+            messageDiv.className = 'msg success';
+
+            // --- Redirect based on user type ---
+            if (body.user.managed_cafe) {
+                window.location.href = "{{ url_for('cafe_admin_dashboard') }}"; // Redirect cafe admin
+            } else if (body.user.role === 'super_admin'){
+                 window.location.href = "{{ url_for('admin_dashboard') }}"; // Redirect super admin
+            } else {
+                window.location.href = "{{ url_for('dashboard') }}"; // Redirect regular user
+            }
         } else {
-            localStorage.setItem("user", JSON.stringify(data.user));
-            window.location.href = "{{ url_for('dashboard') }}";
+            messageDiv.innerText = body.error || "Login failed.";
+            messageDiv.className = 'msg error';
+            localStorage.removeItem("user");
         }
+    })
+    .catch(error => {
+        console.error('Login error:', error);
+        messageDiv.innerText = "An error occurred during login.";
+        messageDiv.className = 'msg error';
+        localStorage.removeItem("user");
     });
 }
 </script>

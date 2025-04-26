@@ -68,6 +68,76 @@
             ],
             "timestamp": "2025-04-11T19:23:13.709275",
             "status": "Order Delivered"
+        },
+        {
+            "order_id": 6,
+            "username": "kunth",
+            "cafe": "Charlie's Cafe",
+            "items": [
+                {
+                    "item": "Falafel Shawrma",
+                    "price": 100,
+                    "quantity": 10
+                },
+                {
+                    "item": "Cold coffee",
+                    "price": 60,
+                    "quantity": 6
+                },
+                {
+                    "item": "Salad",
+                    "price": 60,
+                    "quantity": 8
+                }
+            ],
+            "total_price": 1840,
+            "timestamp": "2025-04-26T00:16:01.723112",
+            "status": "Order Delivered"
+        },
+        {
+            "order_id": 7,
+            "username": "kunth",
+            "cafe": "Hashtag",
+            "items": [
+                {
+                    "item": "Aloo tikki burger",
+                    "price": 90,
+                    "quantity": 10
+                }
+            ],
+            "total_price": 900,
+            "timestamp": "2025-04-26T00:26:12.104152",
+            "status": "Pending"
+        },
+        {
+            "order_id": 8,
+            "username": "fcfcfc",
+            "cafe": "Hashtag",
+            "items": [
+                {
+                    "item": "Aloo tikki burger",
+                    "price": 90,
+                    "quantity": 1
+                }
+            ],
+            "total_price": 90,
+            "timestamp": "2025-04-26T00:41:42.338141",
+            "status": "Pending"
+        },
+        {
+            "order_id": 9,
+            "username": "Rishi",
+            "cafe": "Charlie's Cafe",
+            "items": [
+                {
+                    "item": "Falafel Shawrma",
+                    "price": 100,
+                    "quantity": 10
+                }
+            ],
+            "total_price": 1000,
+            "timestamp": "2025-04-26T01:36:52.151720",
+            "status": "Pending"
         }
     ]
 }

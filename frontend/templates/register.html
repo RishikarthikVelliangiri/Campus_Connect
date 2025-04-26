@@ -2,66 +2,66 @@
 {% block content %}
 <div class="form-container fade">
     <h2>Register</h2>
-    <form id="registerForm">
-        <label>Username:</label>
+    <form id="registerForm" onsubmit="registerUser(event)">
+        <label for="username">Username:</label>
         <input type="text" id="username" name="username" required>
-        <label>Password:</label>
-        <input type="password" id="password" name="password" required>
-        <label>Region:</label>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required minlength="6">
+        <label for="region">Region:</label>
         <select id="region" name="region" required>
-            <option value="">Select Region</option>
-            <option value="West">West</option>
-            <option value="East">East</option>
-            <option value="South">South</option>
+             <option value="">Select Region</option>
+             <option value="West">West</option>
+             <option value="East">East</option>
+             <option value="South">South</option>
         </select>
-        <label>Block Letter:</label>
+        <label for="letter">Block Letter:</label>
         <select id="letter" name="letter" required>
-            <option value="">Select Letter</option>
-            <!-- Letters A-G for West, H-K for East, L-T for South -->
-            <option value="A">A</option>
-            <option value="B">B</option>
-            <option value="C">C</option>
-            <option value="D">D</option>
-            <option value="E">E</option>
-            <option value="F">F</option>
-            <option value="G">G</option>
-            <option value="H">H</option>
-            <option value="I">I</option>
-            <option value="J">J</option>
-            <option value="K">K</option>
-            <option value="L">L</option>
-            <option value="M">M</option>
-            <option value="N">N</option>
-            <option value="O">O</option>
-            <option value="P">P</option>
-            <option value="Q">Q</option>
-            <option value="R">R</option>
-            <option value="S">S</option>
-            <option value="T">T</option>
+             <option value="">Select Letter</option>
+             <option value="A">A</option><option value="B">B</option><option value="C">C</option>
+             <option value="D">D</option><option value="E">E</option><option value="F">F</option>
+             <option value="G">G</option><option value="H">H</option><option value="I">I</option>
+             <option value="J">J</option><option value="K">K</option><option value="L">L</option>
+             <option value="M">M</option><option value="N">N</option><option value="O">O</option>
+             <option value="P">P</option><option value="Q">Q</option><option value="R">R</option>
+             <option value="S">S</option><option value="T">T</option>
         </select>
-        <button type="button" onclick="registerUser()">Register</button>
+        <button type="submit">Register</button>
     </form>
     <div id="message" class="msg"></div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-function registerUser() {
+function registerUser(event) {
+    event.preventDefault();
     var username = document.getElementById("username").value;
     var password = document.getElementById("password").value;
     var region = document.getElementById("region").value;
     var letter = document.getElementById("letter").value;
-    fetch('/register', {
+    var messageDiv = document.getElementById("message");
+    messageDiv.innerText = "";
+
+    fetch('/api/register', { // Ensure endpoint is correct
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({username: username, password: password, region: region, letter: letter})
     })
-    .then(response => response.json())
-    .then(data => {
-        if(data.error) {
-            document.getElementById("message").innerText = data.error;
-        } else {
-            document.getElementById("message").innerText = data.message;
+    .then(response => response.json().then(data => ({ status: response.status, body: data })))
+    .then(({ status, body }) => {
+        if (status === 201) {
+            messageDiv.innerText = body.message + " Redirecting to login...";
+            messageDiv.className = 'msg success';
             setTimeout(() => { window.location.href = "{{ url_for('login_page') }}"; }, 2000);
+        } else {
+            messageDiv.innerText = body.error || "Registration failed.";
+            messageDiv.className = 'msg error';
         }
+    })
+    .catch(error => {
+        console.error('Registration error:', error);
+        messageDiv.innerText = "An error occurred during registration.";
+        messageDiv.className = 'msg error';
     });
 }
 </script>

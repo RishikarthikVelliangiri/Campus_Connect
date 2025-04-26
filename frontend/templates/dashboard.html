@@ -1,24 +1,131 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="dashboard-container fade">
-    <h2>Dashboard</h2>
-    <div id="welcomeUser"></div>
-    <button class="btn" onclick="logout()">Logout</button>
+    {# Content dynamically filled by JS #}
+    <h2 id="welcomeMessage">Welcome!</h2>
+    <p id="userInfo"></p>
+
+    <div class="dashboard-actions">
+         <a href="{{ url_for('order_page') }}" class="btn">Place a New Order</a>
+         {# Logout button is now in the main nav, triggered by JS function #}
+         {# <button class="btn" onclick="logout()">Logout</button> #}
+    </div>
+
+    <hr>
+
+    <h3>Your Order History</h3>
+    <div id="orderHistory" class="order-history-list">
+        Loading order history...
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
+// Function to format timestamp (same as before)
+function formatTimestamp(isoTimestamp) {
+    if (!isoTimestamp) return 'N/A';
+    try {
+        const date = new Date(isoTimestamp);
+        const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true };
+        return date.toLocaleString(undefined, options);
+    } catch (e) { return isoTimestamp; }
+}
+
+function displayOrderHistory(orders) { // Same as before
+    const historyDiv = document.getElementById("orderHistory");
+    historyDiv.innerHTML = "";
+    if (!orders || orders.length === 0) {
+        historyDiv.innerHTML = "<p>You haven't placed any orders yet.</p>";
+        return;
+    }
+    orders.forEach(order => {
+        const orderCard = document.createElement('div');
+        orderCard.className = 'order-history-card';
+        let itemsSummary = order.items.map(item => `${item.quantity}x ${item.item}`).join(', ');
+        if (itemsSummary.length > 100) itemsSummary = itemsSummary.substring(0, 97) + '...';
+        orderCard.innerHTML = `
+            <div class="order-card-header">
+                <strong>Order #${order.order_id}</strong> (${order.cafe}) -
+                <span class="status-${order.status.toLowerCase().replace(' ', '-')}">${order.status}</span>
+            </div>
+            <div class="order-card-body">
+                <p>Placed: ${formatTimestamp(order.timestamp)}</p>
+                <p>Items: ${itemsSummary}</p>
+                <p>Total: Rs. ${order.total_price ? order.total_price.toFixed(2) : 'N/A'}</p>
+            </div>
+             <div class="order-card-footer">
+                <a href="#" onclick="viewOrderStatus(${order.order_id}); return false;" class="btn-small">View Details / Status</a>
+             </div>
+        `;
+        historyDiv.appendChild(orderCard);
+    });
+}
+
+function fetchOrderHistory(username) {
+    if (!username) {
+        document.getElementById("orderHistory").innerText = "Could not load history: User not identified.";
+        return;
+    }
+    // Fetch using query parameter
+    fetch(`/api/my_orders?username=${encodeURIComponent(username)}`)
+        .then(response => response.json().then(data => ({ status: response.status, body: data })))
+        .then(({ status, body }) => {
+             if (status === 200) {
+                 displayOrderHistory(body.orders);
+             } else {
+                console.error("Error fetching history:", body.error);
+                document.getElementById("orderHistory").innerText = "Error loading history: " + (body.error || 'Unknown error');
+             }
+        })
+        .catch(error => {
+            console.error("Error fetching order history:", error);
+            document.getElementById("orderHistory").innerText = "Could not load order history.";
+        });
+}
+
+// Function to navigate to status page (same as before)
+function viewOrderStatus(orderId) {
+    localStorage.setItem("latestOrderId", orderId);
+    window.location.href = "{{ url_for('order_status_page') }}";
+}
+
+// Setup dashboard on load
 document.addEventListener("DOMContentLoaded", function(){
-    var user = JSON.parse(localStorage.getItem("user"));
-    if(!user){
+    const welcome H2 = document.getElementById("welcomeMessage");
+    const userInfoP = document.getElementById("userInfo");
+    const userString = localStorage.getItem("user");
+    let user = null;
+
+    if (userString) {
+        try {
+            user = JSON.parse(userString);
+        } catch(e) {
+            console.error("Failed to parse user data:", e);
+            localStorage.removeItem("user"); // Clear invalid data
+            window.location.href = "{{ url_for('login_page') }}"; // Redirect if data is bad
+            return;
+        }
+    }
+
+    if (!user || !user.username) {
+        // If no user data found in localStorage, redirect to login
         window.location.href = "{{ url_for('login_page') }}";
     } else {
-        document.getElementById("welcomeUser").innerText = 
-            "Welcome, " + user.username + " | Dorm: " + user.dorm;
+        // Display user info
+        welcomeH2.textContent = `Welcome, ${user.username}!`;
+        userInfoP.textContent = `Your registered Dorm: ${user.dorm || 'N/A'}`;
+        // Fetch order history for this user
+        fetchOrderHistory(user.username);
     }
 });
-function logout(){
-    localStorage.removeItem("user");
-    localStorage.removeItem("latestOrderId");
-    window.location.href = "{{ url_for('home') }}";
-}
+
+// Logout function (called from base.html nav link)
+// Placed here for context, but defined in base.html's script now.
+// function logout(){
+//     localStorage.removeItem("user");
+//     localStorage.removeItem("latestOrderId");
+//     window.location.href = "{{ url_for('login_page') }}";
+// }
 </script>
 {% endblock %}

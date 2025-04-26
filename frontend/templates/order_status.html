@@ -1,46 +1,75 @@
+<!-- frontend/templates/order_status.html -->
 {% extends "base.html" %}
 {% block content %}
-<div class="form-container fade">
+<div class="status-container fade">
     <h2>Order Status</h2>
-    <div id="statusDiv"></div>
-    <button class="btn" onclick="goBack()">Back to Dashboard</button>
+    <div id="statusDiv">Loading order status...</div>
+    <div id="orderDetailsDiv" class="order-details"></div>
+    <p style="text-align:center; margin-top: 15px; font-style: italic; color: #777;">
+        Order status is updated manually by the cafe. Check back later or contact the cafe if needed.
+    </p>
+    <div style="text-align: center; margin-top: 20px;"> {# Center buttons #}
+        <button class="btn" onclick="goBack()">Back to Dashboard</button>
+        <button class="btn" onclick="checkOrderStatus()">Refresh Status</button>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-document.addEventListener("DOMContentLoaded", function(){
-    let user = localStorage.getItem("user");
-    if(!user){
-        window.location.href = "{{ url_for('login_page') }}";
-    }
-});
+// Removed pollingInterval variable - no automatic polling needed
+
+// formatTimestamp and displayOrderDetails functions remain the same as before
+function formatTimestamp(isoTimestamp) {
+    if (!isoTimestamp) return 'N/A';
+    try { const date = new Date(isoTimestamp); const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }; return date.toLocaleString(undefined, options); } catch (e) { return isoTimestamp; }
+}
+function displayOrderDetails(order) {
+     const detailsDiv = document.getElementById("orderDetailsDiv"); detailsDiv.innerHTML = "";
+     if (!order || !order.items || order.items.length === 0) { detailsDiv.innerHTML = "<p>No item details found.</p>"; return; }
+     let itemsHtml = '<h4>Order Items:</h4><ul>';
+     order.items.forEach(item => { itemsHtml += `<li>${item.quantity} x ${item.item} (@ Rs. ${item.price.toFixed(2)} each)</li>`; });
+     itemsHtml += '</ul>'; detailsDiv.innerHTML = itemsHtml;
+     if (order.total_price !== undefined) { detailsDiv.innerHTML += `<p class="order-total"><strong>Total Price: Rs. ${order.total_price.toFixed(2)}</strong></p>`; }
+}
+// --- End of copied functions ---
+
 function checkOrderStatus() {
-    let orderId = localStorage.getItem("latestOrderId");
-    if(!orderId) {
-        document.getElementById("statusDiv").innerText = "No recent order found.";
-        return;
-    }
-    fetch('/order_status/' + orderId)
-    .then(response => response.json())
-    .then(data => {
-        if(data.error) {
-            document.getElementById("statusDiv").innerText = data.error;
-        } else {
-            let order = data.order;
-            document.getElementById("statusDiv").innerHTML = 
-                "<p>Order ID: " + order.order_id + "</p>" +
-                "<p>Cafe: " + order.cafe + "</p>" +
-                "<p>Status: " + order.status + "</p>" +
-                "<p>Ordered at: " + order.timestamp + "</p>";
-            if(order.status === "Delivering") {
-                setTimeout(checkOrderStatus, 5000); // Poll every 5 seconds
-            } else if(order.status === "Order Delivered") {
-                alert("Your order has been delivered!");
-            }
-        }
-    });
+    // --- REMOVED: Clearing previous polling interval ---
+    const statusDiv = document.getElementById("statusDiv");
+    const orderId = localStorage.getItem("latestOrderId");
+
+    if (!orderId) { statusDiv.innerText = "No recent order ID found."; displayOrderDetails(null); return; }
+
+    statusDiv.innerHTML = "<i>Refreshing status...</i>"; // Indicate refresh
+
+    fetch(`/api/order_status/${orderId}`)
+        .then(response => response.json().then(data => ({ status: response.status, body: data })))
+        .then(({ status, body }) => {
+            if (status === 404) { statusDiv.innerText = `Order ID ${orderId} not found.`; displayOrderDetails(null); }
+            else if (status === 200 && body.order) {
+                const order = body.order;
+                 statusDiv.innerHTML = `
+                     <p><strong>Order ID:</strong> ${order.order_id}</p>
+                     <p><strong>Cafe:</strong> ${order.cafe}</p>
+                     <p><strong>Status:</strong> <span class="status-${order.status.toLowerCase().replace(/ /g, '-')}">${order.status}</span></p>
+                     <p><strong>Ordered at:</strong> ${formatTimestamp(order.timestamp)}</p>
+                 `;
+                 displayOrderDetails(order);
+                 // --- REMOVED: setTimeout polling logic ---
+            } else { statusDiv.innerText = body.error || `Error fetching status for order ${orderId}.`; displayOrderDetails(null); }
+        })
+        .catch(error => { console.error("Error fetching order status:", error); statusDiv.innerText = "Could not fetch order status."; displayOrderDetails(null); });
 }
-function goBack() {
-    window.location.href = "{{ url_for('dashboard') }}";
-}
-document.addEventListener("DOMContentLoaded", checkOrderStatus);
+
+function goBack() { window.location.href = "{{ url_for('dashboard') }}"; }
+
+document.addEventListener("DOMContentLoaded", function(){
+     if (!localStorage.getItem("user")) { window.location.href = "{{ url_for('login_page') }}"; return; }
+     checkOrderStatus(); // Initial status check
+});
+
+// --- REMOVED: beforeunload event listener for polling ---
+
 </script>
 {% endblock %}

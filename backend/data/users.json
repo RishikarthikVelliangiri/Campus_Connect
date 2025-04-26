@@ -3,19 +3,52 @@
         {
             "username": "newuser",
             "password": "newpass",
-            "dorm": "West",
-            "room": "101"
+            "dorm": "West A"
         },
         {
             "username": "user",
             "password": "userpass",
-            "dorm": "West",
-            "room": "205"
+            "dorm": "West B"
         },
         {
             "username": "Rishi",
             "password": "Rishi123",
             "dorm": "West A"
+        },
+        {
+            "username": "admin",
+            "password": "adminpass",
+            "dorm": "Admin",
+            "role": "super_admin"
+        },
+        {
+            "username": "hashtag_admin",
+            "password": "ht_pass123",
+            "dorm": "Admin",
+            "managed_cafe": "Hashtag"
+        },
+        {
+            "username": "korebi_admin",
+            "password": "kb_pass123",
+            "dorm": "Admin",
+            "managed_cafe": "Korebi"
+        },
+        {
+            "username": "charlie_admin",
+            "password": "cc_pass123",
+            "dorm": "Admin",
+            "managed_cafe": "Charlie's Cafe"
+        },
+        {
+            "username": "bluetokai_admin",
+            "password": "bt_pass123",
+            "dorm": "Admin",
+            "managed_cafe": "Blue Tokai"
+        },
+        {
+            "username": "fcfcfc",
+            "password": "fsfsfs",
+            "dorm": "West P"
         }
     ]
 }

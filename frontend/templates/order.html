@@ -1,85 +1,193 @@
+<!-- frontend/templates/order.html -->
 {% extends "base.html" %}
 {% block content %}
-<div class="form-container fade">
+<div class="order-container fade">
     <h2>Order Food</h2>
-    <form id="orderForm">
-        <label>Select Cafe:</label>
-        <select id="cafeSelect" required>
-            <option value="">Select Cafe</option>
+    <form id="orderForm" onsubmit="placeOrder(event)">
+        <label for="cafeSelect">Select Cafe:</label>
+        <select id="cafeSelect" name="cafe" required>
+            <option value="">-- Select a Cafe --</option>
             <option value="Hashtag">Hashtag</option>
             <option value="Korebi">Korebi</option>
             <option value="Charlie's Cafe">Charlie's Cafe</option>
             <option value="Blue Tokai">Blue Tokai</option>
         </select>
-        <div id="menuDiv"></div>
-        <button type="button" onclick="placeOrder()">Place Order</button>
+
+        <!-- Menu items will be loaded here as cards -->
+        <div id="menuDiv" class="menu-items">
+             <p style="text-align: center; color: #888;">Please select a cafe to view the menu.</p>
+        </div>
+
+        <div id="totalPriceDiv" class="total-price">
+            Total: Rs. <span id="totalPrice">0.00</span>
+        </div>
+
+        <button type="submit">Place Order</button>
     </form>
     <div id="orderMessage" class="msg"></div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-document.addEventListener("DOMContentLoaded", function(){
-    let user = localStorage.getItem("user");
-    if(!user){
-        window.location.href = "{{ url_for('login_page') }}";
-    }
-});
-function loadCafeMenu(cafe) {
-    fetch('/menu')
-    .then(response => response.json())
-    .then(data => {
-        let menuDiv = document.getElementById("menuDiv");
-        menuDiv.innerHTML = "<h3>Menu for " + cafe + "</h3>";
-        data[cafe].forEach(function(item, idx) {
-            menuDiv.innerHTML += item.item + " - Rs. " + item.price + 
-            " <input type='number' id='qty" + idx + "' placeholder='0' min='0' value='0'><br>";
-        });
-    });
-}
-document.getElementById("cafeSelect").addEventListener("change", function(){
-    let cafe = this.value;
-    if(cafe){
-        loadCafeMenu(cafe);
-    } else {
-        document.getElementById("menuDiv").innerHTML = "";
-    }
-});
-function placeOrder() {
-    let cafe = document.getElementById("cafeSelect").value;
-    if(!cafe) {
-        document.getElementById("orderMessage").innerText = "Please select a cafe.";
-        return;
-    }
-    fetch('/menu')
-    .then(response => response.json())
-    .then(data => {
-        let orderItems = [];
-        data[cafe].forEach(function(item, idx) {
-            let qty = parseInt(document.getElementById("qty" + idx).value);
-            if(qty > 0) {
-                orderItems.push({item: item.item, price: item.price, quantity: qty});
-            }
-        });
-        if(orderItems.length === 0) {
-            document.getElementById("orderMessage").innerText = "Please select at least one item.";
+    let currentMenu = {}; // Store current cafe menu data
+
+    // --- UPDATED loadCafeMenu function ---
+    function loadCafeMenu(cafe) {
+        const menuDiv = document.getElementById("menuDiv");
+        const totalPriceSpan = document.getElementById("totalPrice");
+        menuDiv.innerHTML = ""; // Clear previous menu/message
+        totalPriceSpan.textContent = "0.00";
+        currentMenu = {};
+
+        if (!cafe) {
+            menuDiv.innerHTML = "<p style='text-align: center; color: #888;'>Please select a cafe to view the menu.</p>";
             return;
         }
-        var user = JSON.parse(localStorage.getItem("user"));
-        fetch('/order', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({username: user.username, cafe: cafe, items: orderItems})
-        })
+
+        // Show loading indicator (optional)
+        menuDiv.innerHTML = "<p style='text-align: center; color: #888;'>Loading menu...</p>";
+
+        fetch('/api/menu')
         .then(response => response.json())
         .then(data => {
-            if(data.error) {
-                document.getElementById("orderMessage").innerText = data.error;
-            } else {
-                // Save order_id so Order Status page can poll for status
-                localStorage.setItem("latestOrderId", data.order.order_id);
-                window.location.href = "{{ url_for('order_status_page') }}";
+             menuDiv.innerHTML = ""; // Clear loading indicator
+            if (!data[cafe]) {
+                menuDiv.innerHTML = "<p style='text-align: center; color: #888;'>Menu not available for this cafe.</p>";
+                return;
             }
+
+            currentMenu = data[cafe]; // Store menu data
+
+            // Add "Menu for X" heading
+            const heading = document.createElement('h3');
+            heading.textContent = `Menu for ${cafe}`;
+            menuDiv.appendChild(heading);
+
+            // Create card for each item
+            currentMenu.forEach((item, idx) => {
+                const card = document.createElement('div');
+                card.className = 'menu-item-card fade'; // Add fade class for animation
+
+                const detailsDiv = document.createElement('div');
+                detailsDiv.className = 'item-details';
+                detailsDiv.innerHTML = `
+                    <span class="item-name">${item.item}</span>
+                    <span class="item-price">Rs. ${item.price.toFixed(2)}</span>
+                `;
+
+                const quantityInput = document.createElement('input');
+                quantityInput.type = 'number';
+                quantityInput.id = `qty${idx}`;
+                quantityInput.name = `qty${idx}`;
+                quantityInput.className = 'item-quantity';
+                quantityInput.placeholder = '0';
+                quantityInput.min = '0';
+                quantityInput.value = '0';
+                quantityInput.dataset.itemIndex = idx; // Store index if needed
+                quantityInput.oninput = updateTotalPrice; // Attach event listener
+
+                card.appendChild(detailsDiv);
+                card.appendChild(quantityInput);
+                menuDiv.appendChild(card);
+
+                // Trigger fade-in animation with a slight delay
+                 setTimeout(() => card.classList.add('active'), idx * 50);
+            });
+        })
+        .catch(error => {
+            console.error("Error loading menu:", error);
+            menuDiv.innerHTML = "<p style='text-align: center; color: red;'>Error loading menu. Please try again later.</p>";
         });
+    }
+
+    function updateTotalPrice() {
+        let total = 0;
+        if (currentMenu && currentMenu.length > 0) {
+            currentMenu.forEach((item, idx) => {
+                const qtyInput = document.getElementById(`qty${idx}`);
+                if (qtyInput) { // Check if input exists
+                    const quantity = parseInt(qtyInput.value) || 0;
+                    if (quantity > 0) {
+                        total += item.price * quantity;
+                    }
+                }
+            });
+        }
+        document.getElementById("totalPrice").textContent = total.toFixed(2);
+    }
+
+    // --- placeOrder function remains the same as previous version ---
+    function placeOrder(event) {
+        event.preventDefault();
+        const cafe = document.getElementById("cafeSelect").value;
+        const orderMessageDiv = document.getElementById("orderMessage");
+        orderMessageDiv.innerText = ""; // Clear previous messages
+
+        const userString = localStorage.getItem("user");
+        let user = null;
+        if (userString) { try { user = JSON.parse(userString); } catch (e) {} }
+
+        if (!user || !user.username) {
+             orderMessageDiv.innerText = "You must be logged in to place an order.";
+             orderMessageDiv.className = 'msg error';
+             return;
+        }
+
+        if (!cafe) { orderMessageDiv.innerText = "Please select a cafe."; orderMessageDiv.className = 'msg error'; return; }
+
+        let orderItems = [];
+        if (currentMenu && currentMenu.length > 0) {
+            currentMenu.forEach((item, idx) => {
+                const qtyInput = document.getElementById(`qty${idx}`);
+                 if (qtyInput){
+                    const quantity = parseInt(qtyInput.value) || 0;
+                    if (quantity > 0) {
+                        orderItems.push({ item: item.item, price: item.price, quantity: quantity });
+                    }
+                 }
+            });
+        }
+
+        if (orderItems.length === 0) { orderMessageDiv.innerText = "Please add items to your order."; orderMessageDiv.className = 'msg error'; return; }
+
+        fetch('/api/order', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ username: user.username, cafe: cafe, items: orderItems })
+        })
+        .then(response => response.json().then(data => ({ status: response.status, body: data })))
+        .then(({ status, body }) => {
+            if (status === 201 && body.order) {
+                orderMessageDiv.innerText = "Order placed! Redirecting...";
+                orderMessageDiv.className = 'msg success';
+                localStorage.setItem("latestOrderId", body.order.order_id);
+                window.location.href = "{{ url_for('order_status_page') }}";
+            } else {
+                orderMessageDiv.innerText = body.error || "Failed to place order.";
+                orderMessageDiv.className = 'msg error';
+            }
+        })
+        .catch(error => {
+            console.error("Error placing order:", error);
+            orderMessageDiv.innerText = "An error occurred while placing the order.";
+            orderMessageDiv.className = 'msg error';
+        });
+    }
+
+    // Add event listener to the select dropdown
+    document.getElementById("cafeSelect").addEventListener("change", function(){
+        loadCafeMenu(this.value);
     });
-}
+
+     // Initial check if user is logged in when page loads
+    document.addEventListener("DOMContentLoaded", function(){
+        if(!localStorage.getItem("user")){
+            document.getElementById('orderForm').style.opacity = '0.6';
+            document.getElementById('orderForm').style.pointerEvents = 'none';
+            document.getElementById('orderMessage').innerText = 'Please log in to order food.';
+            document.getElementById('orderMessage').className = 'msg error';
+        }
+    });
 </script>
 {% endblock %}
